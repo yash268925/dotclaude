@@ -73,7 +73,7 @@ read -r five_pct five_reset seven_pct seven_reset <<<"$(
 : "${five_pct:=-1}" "${five_reset:=-1}" "${seven_pct:=-1}" "${seven_reset:=-1}"
 
 # Current session id, truncated to 8 chars. Matches the session_id[:8] used
-# as the display-key suffix in scripts/agent-usage-report.py.
+# as the display-key suffix in scripts/agent-usage-report.ts.
 session_id="$(printf '%s' "$input" | jq -r '.session_id // empty' 2>/dev/null)"
 sid8="${session_id:0:8}"
 : "${sid8:=--------}"

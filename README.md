@@ -18,7 +18,7 @@ dotclaude/
 │   ├── settings.json
 │   ├── statusline-command.sh
 │   └── scripts/
-│       └── agent-usage-report.py
+│       └── agent-usage-report.ts
 ├── install.sh
 └── README.md
 ```
