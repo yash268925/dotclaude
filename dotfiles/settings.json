@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "defaultMode": "auto"
+  },
+  "model": "opus",
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline-command.sh",
+    "padding": 0,
+    "refreshInterval": 30
+  },
+  "enabledPlugins": {
+    "notion-workspace-plugin@notion-plugin-marketplace": true,
+    "orchestrator-agents@dotclaude": true
+  },
+  "extraKnownMarketplaces": {
+    "notion-plugin-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "makenotion/claude-code-notion-plugin"
+      }
+    },
+    "dotclaude": {
+      "source": {
+        "source": "github",
+        "repo": "yash268925/dotclaude"
+      }
+    }
+  },
+  "language": "japanese",
+  "effortLevel": "low",
+  "agent": "orchestrator",
+  "tui": "fullscreen",
+  "autoConnectIde": true
+}

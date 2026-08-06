@@ -1,0 +1,37 @@
+{
+  "name": "dotclaude",
+  "owner": {
+    "name": "yash268925",
+    "email": "yash.2689.25@gmail.com"
+  },
+  "metadata": {
+    "description": "個人用プラグイン置き場",
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "dart-lsp",
+      "source": "./plugins/dart-lsp",
+      "description": "Dart language server for Claude Code",
+      "version": "1.0.0",
+      "author": {
+        "name": "yamada"
+      },
+      "license": "MIT",
+      "keywords": ["dart", "lsp", "flutter"],
+      "category": "language-support"
+    },
+    {
+      "name": "orchestrator-agents",
+      "source": "./plugins/orchestrator-agents",
+      "description": "Orchestrator agent plus a three-tier worker agent set for task delegation",
+      "version": "1.0.0",
+      "author": {
+        "name": "yash268925"
+      },
+      "license": "MIT",
+      "keywords": ["agents", "orchestrator", "subagents"],
+      "category": "workflow"
+    }
+  ]
+}
