@@ -2,7 +2,6 @@
   "permissions": {
     "defaultMode": "auto"
   },
-  "model": "opus",
   "statusLine": {
     "type": "command",
     "command": "~/.claude/statusline-command.sh",
@@ -28,6 +27,7 @@
     }
   },
   "language": "japanese",
+  "model": "opus",
   "effortLevel": "medium",
   "agent": "orchestrator",
   "tui": "fullscreen",
