@@ -2,6 +2,7 @@
   "permissions": {
     "defaultMode": "auto"
   },
+  "model": "opus",
   "statusLine": {
     "type": "command",
     "command": "~/.claude/statusline-command.sh",
@@ -10,7 +11,8 @@
   },
   "enabledPlugins": {
     "notion-workspace-plugin@notion-plugin-marketplace": true,
-    "orchestrator-agents@dotclaude": true
+    "orchestrator-agents@dotclaude": true,
+    "commit-commands@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "notion-plugin-marketplace": {
@@ -27,8 +29,7 @@
     }
   },
   "language": "japanese",
-  "model": "opus",
-  "effortLevel": "medium",
+  "effortLevel": "high",
   "agent": "orchestrator",
   "tui": "fullscreen",
   "autoConnectIde": true
