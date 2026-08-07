@@ -1,0 +1,9 @@
+{
+  "name": "writing-style",
+  "description": "Writing rules for text that ships outside the conversation: commit messages, PR titles and bodies, issues, and documentation.",
+  "version": "1.0.0",
+  "author": {
+    "name": "yash268925"
+  },
+  "license": "MIT"
+}

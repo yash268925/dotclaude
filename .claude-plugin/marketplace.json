@@ -31,6 +31,18 @@
       "license": "MIT",
       "keywords": ["agents", "orchestrator", "subagents"],
       "category": "workflow"
+    },
+    {
+      "name": "writing-style",
+      "source": "./plugins/writing-style",
+      "description": "Writing rules for commit messages, PRs, issues, and docs",
+      "version": "1.0.0",
+      "author": {
+        "name": "yash268925"
+      },
+      "license": "MIT",
+      "keywords": ["writing", "git", "github", "documentation"],
+      "category": "workflow"
     }
   ]
 }

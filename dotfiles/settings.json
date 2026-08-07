@@ -28,7 +28,7 @@
     }
   },
   "language": "japanese",
-  "effortLevel": "low",
+  "effortLevel": "medium",
   "agent": "orchestrator",
   "tui": "fullscreen",
   "autoConnectIde": true
