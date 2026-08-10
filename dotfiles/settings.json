@@ -11,8 +11,8 @@
   },
   "enabledPlugins": {
     "notion-workspace-plugin@notion-plugin-marketplace": true,
-    "orchestrator-agents@dotclaude": true,
-    "commit-commands@claude-plugins-official": true
+    "commit-commands@claude-plugins-official": true,
+    "writing-style@dotclaude": true
   },
   "extraKnownMarketplaces": {
     "notion-plugin-marketplace": {

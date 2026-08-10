@@ -12,12 +12,12 @@ dotclaude/
 ├── .claude-plugin/marketplace.json
 ├── plugins/
 │   ├── dart-lsp/            # Dart Analysis Server を LSP として接続する
-│   ├── orchestrator-agents/ # orchestrator + worker 3 階層の agent
 │   └── writing-style/       # commit / PR / issue / docs の文体ルール skill
 ├── dotfiles/
 │   ├── CLAUDE.md
 │   ├── settings.json
 │   ├── statusline-command.sh
+│   ├── agents/              # orchestrator + worker 階層の agent
 │   └── scripts/
 │       └── agent-usage-report.ts
 ├── install.sh
@@ -42,21 +42,20 @@ Claude Code 上で実行する。
 
 ```
 /plugin marketplace add yash268925/dotclaude
-/plugin install orchestrator-agents@dotclaude
 /plugin install dart-lsp@dotclaude
 /plugin install writing-style@dotclaude
 ```
 
 ## agents
 
-`orchestrator-agents` plugin が提供する。
+`dotfiles/agents/` に置き、`install.sh` が `~/.claude/agents` にリンクする。
 
 | agent | 用途 |
 | --- | --- |
 | `orchestrator` | 要件を確定してタスクを分割し、自分で実施するか worker に委託するかを判断する |
 | `worker-heavy` | 分割できない複雑な事象、原因不明の不具合調査、広範囲の設計判断 |
 | `worker-standard` | 要件が明確な実装・バグ修正・リファクタリング。標準の委託先 |
-| `worker-light` | 定型作業、テスト / lint の実行、検索や情報収集 |
+| `helper` | 定型作業、テスト / lint の実行、検索や情報収集 |
 
 ## skills
 
@@ -68,4 +67,4 @@ Claude Code 上で実行する。
 
 ## dotfiles を plugin にしていない理由
 
-statusLine は plugin として配布できないため、`settings.json` と `statusline-command.sh` は plugin 化できない。よって dotfiles は `install.sh` によるシンボリックリンク方式を採り、plugin で配布できるもの（agents, skills, LSP 設定）のみを `plugins/` に置く。
+statusLine は plugin として配布できないため、`settings.json` と `statusline-command.sh` は plugin 化できない。よって dotfiles は `install.sh` によるシンボリックリンク方式を採る。agents も plugin 経由だと `plugin-name:agent-name` の形でしか参照できず、`settings.json` の `agent` 指定や日常の呼び出しが冗長になるため dotfiles 側に置いている。`plugins/` に残すのは skill と LSP 設定のみ。

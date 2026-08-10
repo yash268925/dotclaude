@@ -6,6 +6,7 @@ DOTFILES_DIR="$REPO_DIR/dotfiles"
 TARGET_DIR="${CLAUDE_HOME:-$HOME/.claude}"
 
 TARGETS=(
+  "agents"
   "CLAUDE.md"
   "settings.json"
   "statusline-command.sh"

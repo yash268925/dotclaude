@@ -1,9 +1,0 @@
-{
-  "name": "orchestrator-agents",
-  "description": "An orchestrator agent that clarifies requirements and splits work, plus three tiers of worker agents (heavy / standard / light) it delegates to based on task difficulty and cost.",
-  "version": "1.0.0",
-  "author": {
-    "name": "yash268925"
-  },
-  "license": "MIT"
-}

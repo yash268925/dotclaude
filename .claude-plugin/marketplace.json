@@ -21,18 +21,6 @@
       "category": "language-support"
     },
     {
-      "name": "orchestrator-agents",
-      "source": "./plugins/orchestrator-agents",
-      "description": "Orchestrator agent plus a three-tier worker agent set for task delegation",
-      "version": "1.0.0",
-      "author": {
-        "name": "yash268925"
-      },
-      "license": "MIT",
-      "keywords": ["agents", "orchestrator", "subagents"],
-      "category": "workflow"
-    },
-    {
       "name": "writing-style",
       "source": "./plugins/writing-style",
       "description": "Writing rules for commit messages, PRs, issues, and docs",
