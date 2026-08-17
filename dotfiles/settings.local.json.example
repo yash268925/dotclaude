@@ -1,0 +1,11 @@
+{
+  "autoMode": {
+    "environment": ["$defaults", "この環境固有の記述"],
+    "allow": ["$defaults", "許可するルール"],
+    "soft_deny": ["$defaults", "確認を求めるルール"],
+    "hard_deny": ["$defaults", "常に禁止するルール"]
+  },
+  "permissions": {
+    "additionalDirectories": ["/path/to/local/dir"]
+  }
+}

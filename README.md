@@ -15,7 +15,9 @@ dotclaude/
 │   └── writing-style/       # commit / PR / issue / docs の文体ルール skill
 ├── dotfiles/
 │   ├── CLAUDE.md
-│   ├── settings.json
+│   ├── settings.json                # 公開用ベース
+│   ├── settings.local.json          # ローカル専用オーバーレイ (gitignore)
+│   ├── settings.local.json.example
 │   ├── statusline-command.sh
 │   ├── agents/              # orchestrator + worker 階層の agent
 │   └── scripts/
@@ -35,6 +37,31 @@ cd ~/work/dotclaude
 ```
 
 `install.sh` は `dotfiles/` の各ファイルを `~/.claude/` にシンボリックリンクする。同名の実体ファイルが既にある場合は `.bak` に退避する。冪等であり、何度実行しても結果は同じ。
+
+ただし `settings.json` だけはリンクではなく、後述のマージによって実ファイルとして生成される。
+
+## settings.json のローカルオーバーレイ
+
+`~/.claude/settings.json` は、次の 2 ファイルをマージして生成する。
+
+| ファイル | 役割 |
+| --- | --- |
+| `dotfiles/settings.json` | 公開用のベース。リポジトリで追跡する |
+| `dotfiles/settings.local.json` | マシン固有の設定 |
+
+settings.json の任意のキーに使える。書式は `dotfiles/settings.local.json.example` を参照する。
+
+マージは jq の `*` 演算子による再帰的なディープマージで、オブジェクトは再帰的に統合され、配列とスカラーはローカル側が優先される。jq が無い環境では python3 にフォールバックし、どちらも無ければエラー終了する。`dotfiles/settings.local.json` が存在しない場合はベースがそのままコピーされる。
+
+```bash
+cp dotfiles/settings.local.json.example dotfiles/settings.local.json
+# dotfiles/settings.local.json を編集する
+./install.sh
+```
+
+**`dotfiles/settings.json` および `dotfiles/settings.local.json` はリンクではないため、編集しても `install.sh` を再実行するまで `~/.claude/settings.json` には反映されない。**
+
+生成に失敗した場合（ローカル側が不正な JSON の場合など）は既存の `~/.claude/settings.json` を書き換えずにエラー終了する。既存が実ファイルで内容が異なる場合は `.bak` に退避する。
 
 ### plugins
 

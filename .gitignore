@@ -8,3 +8,5 @@ Thumbs.db
 .idea/
 .vscode/
 *.bak
+
+dotfiles/settings.local.json
