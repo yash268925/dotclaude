@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Claude Code statusline: rate limit usage meters
+#   󰍥 00%              -> context window usage %
 #   󱫥 (meter) 00% (hh:mm)  -> 5-hour window: usage % and time until reset
 #   󰇡 (meter) 00% (m/dd)   -> 7-day window:  usage % and reset date
 set -uo pipefail
@@ -42,6 +43,15 @@ meter() {
   printf '%s%s' "$out" "$RESET"
 }
 
+# Color by context window usage: <=40% green, <=70% yellow, else red.
+ctx_color_for() {
+  local pct=$1
+  if   (( pct <= 40 )); then printf '\033[32m'
+  elif (( pct <= 70 )); then printf '\033[33m'
+  else                       printf '\033[31m'
+  fi
+}
+
 # Color by usage level: <60% green, <85% yellow, else red.
 color_for() {
   local pct=$1
@@ -71,6 +81,14 @@ read -r five_pct five_reset seven_pct seven_reset <<<"$(
     ] | @tsv' 2>/dev/null
 )"
 : "${five_pct:=-1}" "${five_reset:=-1}" "${seven_pct:=-1}" "${seven_reset:=-1}"
+
+ctx_pct="$(printf '%s' "$input" | jq -r '.context_window.used_percentage // empty | floor' 2>/dev/null)"
+: "${ctx_pct:=-1}"
+if (( ctx_pct >= 0 )); then
+  seg0="$(ctx_color_for "$ctx_pct")${ctx_pct}%${RESET}"
+else
+  seg0="${DIM}--%${RESET}"
+fi
 
 # Current session id, truncated to 8 chars. Matches the session_id[:8] used
 # as the display-key suffix in scripts/agent-usage-report.ts.
@@ -103,4 +121,4 @@ else
   seg2="${DIM}$(meter 0)  --% (-/- --:--)${RESET}"
 fi
 
-printf '󱫥 %s %s|%s 󰇡 %s  %s%s%s\n' "$seg1" "$DIM" "$RESET" "$seg2" "$DIM" "$sid8" "$RESET"
+printf '󰍥 %s %s|%s 󱫥 %s %s|%s 󰇡 %s  %s%s%s\n' "$seg0" "$DIM" "$RESET" "$seg1" "$DIM" "$RESET" "$seg2" "$DIM" "$sid8" "$RESET"
