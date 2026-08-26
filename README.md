@@ -19,7 +19,7 @@ dotclaude/
 │   ├── settings.local.json          # ローカル専用オーバーレイ (gitignore)
 │   ├── settings.local.json.example
 │   ├── statusline-command.sh
-│   ├── agents/              # orchestrator + worker 階層の agent
+│   ├── agents/              # facilitator + worker 階層の agent
 │   └── scripts/
 │       └── agent-usage-report.ts
 ├── install.sh
@@ -79,7 +79,7 @@ Claude Code 上で実行する。
 
 | agent | 用途 |
 | --- | --- |
-| `orchestrator` | 要件を確定してタスクを分割し、自分で実施するか worker に委託するかを判断する |
+| `facilitator` | ユーザーとの対話を専属し、サブエージェントへタスクを分配して進行管理と状況整理を行う |
 | `worker-heavy` | 分割できない複雑な事象、原因不明の不具合調査、広範囲の設計判断 |
 | `worker-standard` | 要件が明確な実装・バグ修正・リファクタリング。標準の委託先 |
 | `helper` | 定型作業、テスト / lint の実行、検索や情報収集 |
