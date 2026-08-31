@@ -32,5 +32,8 @@
   "autoConnectIde": true,
   "model": "opus",
   "effortLevel": "low",
-  "agent": "facilitator"
+  "agent": "facilitator",
+  "attribution": {
+    "sessionUrl": false
+  }
 }
