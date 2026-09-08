@@ -35,5 +35,8 @@
   "agent": "facilitator",
   "attribution": {
     "sessionUrl": false
+  },
+  "env": {
+    "CLAUDE_CODE_THRIFTY_SONIC": false
   }
 }
