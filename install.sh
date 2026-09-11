@@ -7,6 +7,7 @@ TARGET_DIR="${CLAUDE_HOME:-$HOME/.claude}"
 
 TARGETS=(
   "agents"
+  "rules"
   "CLAUDE.md"
   "statusline-command.sh"
   "scripts"

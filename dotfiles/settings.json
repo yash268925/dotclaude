@@ -10,8 +10,7 @@
   },
   "enabledPlugins": {
     "notion-workspace-plugin@notion-plugin-marketplace": true,
-    "commit-commands@claude-plugins-official": true,
-    "writing-style@dotclaude": true
+    "commit-commands@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "notion-plugin-marketplace": {
@@ -31,7 +30,7 @@
   "tui": "fullscreen",
   "autoConnectIde": true,
   "model": "opus",
-  "effortLevel": "low",
+  "effortLevel": "medium",
   "agent": "facilitator",
   "attribution": {
     "sessionUrl": false
