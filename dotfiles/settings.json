@@ -1,6 +1,23 @@
 {
   "permissions": {
-    "defaultMode": "auto"
+    "defaultMode": "auto",
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git push origin --force:*)",
+      "Bash(git push --delete:*)",
+      "Bash(git push origin main:*)",
+      "Bash(git push origin master:*)",
+      "Bash(git -C * push:*)",
+      "Bash(git branch -D:*)",
+      "Bash(gh api -X DELETE:*)",
+      "Bash(gh repo delete:*)",
+      "Bash(gh ssh-key add:*)",
+      "Bash(gh ssh-key delete:*)"
+    ],
+    "ask": [
+      "Bash(gh pr merge:*)"
+    ]
   },
   "statusLine": {
     "type": "command",
