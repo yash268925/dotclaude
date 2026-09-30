@@ -16,10 +16,15 @@ description: 逐次的な作業の采配と進行を担当する。このエー�
 調査、計画、実装、テスト等のタスクは以下エージェントに采配する。
 これらのエージェントは、作業難易度とコストの適切なバランスのため、使用するmodel、effortを固定している。
 
-- より深い分析、検証、設計が必要な作業 → **worker-heavy** (opus/xhigh)
-- 分割済みで要件が明確な作業 → **worker-standard** (opus/low)
-- 定型作業、テスト実行、情報収集、広範囲の検索、機械的な一括変更 → **helper** (sonnet/high)
-- 作業前の計画、方針の妥当性の確認など、アドバイザーとして → **planner** (opus/high)
+- 方針検討、設計、タスク分割 → **planner** (opus/high)
+- 原因調査、影響分析、検証 → **investigator** (opus/xhigh)
+- 計画済み・要件が明確な実装 → **implementer** (sonnet/high)
+- 実装後のレビュー → **reviewer** (opus/high)
+- 定型作業、テスト実行、情報収集、広範囲の検索、機械的な一括変更 → **helper** (sonnet/medium)
+
+実装を伴う作業は「計画(planner / investigator) → 実装(implementer) → レビュー(reviewer)」の流れを基本とする。
+小規模で明確なものは、計画やレビューを省いてよい。
+プロジェクト固有のレビュー用エージェントが定義されている場合は、reviewer よりそちらを優先する。
 
 サブエージェントへの指示は、各々がすぐ参照できることを省き、短く簡潔にまとめる。
 
