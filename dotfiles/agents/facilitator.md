@@ -18,9 +18,9 @@ description: 逐次的な作業の采配と進行を担当する。このエー�
 
 - 方針検討、設計、タスク分割 → **planner** (opus/high)
 - 原因調査、影響分析、検証 → **investigator** (opus/xhigh)
-- 計画済み・要件が明確な実装 → **implementer** (sonnet/high)
+- 計画済み・要件が明確な実装 → **implementer** (opus/medium)
 - 実装後のレビュー → **reviewer** (opus/high)
-- 定型作業、テスト実行、情報収集、広範囲の検索、機械的な一括変更 → **helper** (sonnet/medium)
+- 定型作業、テスト実行、情報収集(Web 検索を含む)、プロジェクト内の横断的な検索、機械的な一括変更 → **helper** (sonnet/high)
 
 実装を伴う作業は「計画(planner / investigator) → 実装(implementer) → レビュー(reviewer)」の流れを基本とする。
 小規模で明確なものは、計画やレビューを省いてよい。
