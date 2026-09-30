@@ -20,8 +20,10 @@ dotclaude/
 │   ├── settings.local.json.example
 │   ├── statusline-command.sh
 │   ├── agents/              # facilitator + worker 階層の agent
+│   ├── rules/               # 常時読み込むルール
 │   └── scripts/
-│       └── agent-usage-report.ts
+│       ├── agent-usage-report.ts
+│       └── deny-broad-search.py     # PreToolUse hook
 ├── install.sh
 └── README.md
 ```
@@ -72,6 +74,16 @@ Claude Code 上で実行する。
 /plugin install dart-lsp@dotclaude
 /plugin install writing-style@dotclaude
 ```
+
+## hooks
+
+`dotfiles/settings.json` の `hooks` に登録する。スクリプトは `dotfiles/scripts/` に置き、`~/.claude/scripts` 経由で参照する。
+
+| hook | 用途 |
+| --- | --- |
+| `scripts/deny-broad-search.py` (PreToolUse / Bash) | `/`、`~`、`$HOME`、`/Users/<name>`、`/usr` などトップレベルを起点にした `find` / `grep -r` / `rg` / `fd` / `ag` / `du` / `ls -R` / `tree` を拒否する |
+
+`deny-broad-search.py` は python3 の標準ライブラリだけで動く。複合コマンド (`;` `&&` `||` `|`)、コマンド置換、`bash -c`、`sudo` / `env` などの前置を分解して各コマンドを検査し、文字列リテラル内や `git grep` は対象にしない。拒否時は代替手段 (探索範囲の限定、Glob / Grep ツール、ユーザーへの確認) を理由文で示す。入力が想定外の場合は許可側に倒す。
 
 ## agents
 
