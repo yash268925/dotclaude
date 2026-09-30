@@ -8,7 +8,7 @@
       "Bash(git push --delete:*)",
       "Bash(git push origin main:*)",
       "Bash(git push origin master:*)",
-      "Bash(git -C * push:*)",
+      "Bash(git -C * push *)",
       "Bash(git branch -D:*)",
       "Bash(gh api -X DELETE:*)",
       "Bash(gh repo delete:*)",
