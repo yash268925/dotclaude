@@ -77,7 +77,20 @@ Claude Code 上で実行する。
 
 ## hooks
 
-`dotfiles/settings.json` の `hooks` に登録する。スクリプトは `dotfiles/scripts/` に置き、`~/.claude/scripts` 経由で参照する。
+スクリプトは `dotfiles/scripts/` に置き、`~/.claude/scripts` 経由で参照する。以下は既定では登録していない。有効にする場合は `dotfiles/settings.json` (または `settings.local.json`) の `hooks` に登録する。
+
+```json
+"hooks": {
+  "PreToolUse": [
+    {
+      "matcher": "Bash",
+      "hooks": [
+        { "type": "command", "command": "python3 ~/.claude/scripts/deny-broad-search.py", "timeout": 10 }
+      ]
+    }
+  ]
+}
+```
 
 | hook | 用途 |
 | --- | --- |
