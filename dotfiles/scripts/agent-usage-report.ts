@@ -9,16 +9,26 @@
  *
  * コストは自前で単価を持たずに、ccusage の当該セッション・モデルの実コストを
  * 「重み付きトークン数」の比率で agentType に配分する方式で算出する
- * (重み = input + 5*output + 1.25*cache_write + 0.1*cache_read。
- *  Anthropic の公開料金表に共通する input:output:cache_write:cache_read の
- *  標準的な倍率をそのまま使っている)。
+ * (重み = input + 5*output + 1.25*cache_write(5分) + 2*cache_write(1時間) + r*cache_read。
+ *  input:output:cache_write:cache_read の単価比をモデル別に持つ。
+ *  r は既定で 0.1 (Anthropic の公開料金表で標準的な倍率)、Opus 5.5 は
+ *  cache_read の単価が input の 1/20 なので 0.05。
+ *  1時間キャッシュの書き込みは全モデル共通で input の 2 倍。
+ *  usage.cache_creation.ephemeral_1h_input_tokens をこれで数え、
+ *  cache_creation_input_tokens の残りを5分書き込みとして数える)。
  * これにより agentType 別コストの合計は、必ず ccusage が報告する実コストと一致する。
+ *
+ * /resume で新しいセッション ID に続いたセッションは、続き元の jsonl に残る
+ * continued-in 行をたどって1つにまとめ、鎖の先頭のセッション ID で表示する。
+ * 続き先の jsonl には続き元のリクエストの一部が写っているので、
+ * message.id + requestId で重複を除き、ccusage と同じく続き元の側で数える。
  *
  * 使い方:
  *     agent-usage-report.ts [YYYY-MM-DD] [--id SESSION_ID_PREFIX]
  *         # 日付省略時は本日 (JST)
  *         # --id は session_id の前方一致フィルタ。レポートの [leaf:xxxxxxxx] や
  *         # statusline 右端に出る8桁ハッシュをそのまま渡せる。
+ *         # 一致したセッションと continued-in でつながったセッションも対象になる。
  *         # --id 指定時は、同一 agentType のサブエージェントを合算せず
  *         # agentType#N として個別行で表示する。
  */
@@ -139,13 +149,14 @@ type Usage = Record<string, number | null | undefined>;
 type Entry = {
   ts: string | null;
   requestId: string | null;
+  messageId: string | null;
   usage: Usage;
   model: string | null;
   effort: string | null;
 };
 
 /**
- * (timestamp, requestId, usage dict, model, effort) のリストを返す。
+ * (timestamp, requestId, message.id, usage dict, model, effort) のリストを返す。
  *
  * skipSidechain=true はメインセッションファイル用。旧バージョンの Claude Code は
  * subagent の発言をメインの transcript にも isSidechain=true で埋め込んでいたため、
@@ -177,6 +188,7 @@ function readUsageEntries(path: string, skipSidechain: boolean): Entry[] {
     entries.push({
       ts: d.timestamp ?? null,
       requestId: d.requestId ?? null,
+      messageId: msg.id ?? null,
       usage,
       model: msg.model ?? null,
       effort: d.effort ?? null,
@@ -221,12 +233,36 @@ function num(usage: Usage, key: string): number {
   return usage[key] || 0;
 }
 
-function weight(usage: Usage): number {
+type Weights = { input: number; output: number; cache_write: number; cache_read: number };
+const DEFAULT_WEIGHTS: Weights = { input: 1, output: 5, cache_write: 1.25, cache_read: 0.1 };
+/** 1時間キャッシュ書き込みの input に対する倍率 (全モデル共通)。 */
+const CACHE_WRITE_1H_WEIGHT = 2;
+/** 日付サフィックスを除いたモデル名 -> 重み。無いモデルは DEFAULT_WEIGHTS。 */
+const MODEL_WEIGHTS: Record<string, Weights> = {
+  // 入力 $4、出力 $20、5分書き込み $5、読み込み $0.20 / 百万トークン
+  "claude-opus-5-5": { input: 1, output: 5, cache_write: 1.25, cache_read: 0.05 },
+};
+
+function cacheWrite1h(usage: Usage): number {
+  const cc = (usage as Record<string, unknown>).cache_creation as Record<string, unknown> | undefined;
+  const v = cc?.ephemeral_1h_input_tokens;
+  return typeof v === "number" ? v : 0;
+}
+
+function weight(usage: Usage, model: string): number {
+  const w = MODEL_WEIGHTS[model.replace(/-\d{8}$/, "")] ?? DEFAULT_WEIGHTS;
   const i = num(usage, "input_tokens");
   const o = num(usage, "output_tokens");
   const cw = num(usage, "cache_creation_input_tokens");
   const cr = num(usage, "cache_read_input_tokens");
-  return i + 5 * o + 1.25 * cw + 0.1 * cr;
+  const cw1h = Math.min(cw, cacheWrite1h(usage));
+  return (
+    w.input * i +
+    w.output * o +
+    w.cache_write * (cw - cw1h) +
+    CACHE_WRITE_1H_WEIGHT * w.input * cw1h +
+    w.cache_read * cr
+  );
 }
 
 type Tokens = { input: number; output: number; cache_write: number; cache_read: number };
@@ -251,10 +287,10 @@ function projectLeaf(projectDirName: string): string {
 }
 
 /**
- * main・サブエージェントいずれもセッションを跨いでは合算しない。
- * ただし同一セッション内で同じ agentType を複数回呼び出した分は合算する
- * (tokensToday 側が (sessionId, agentType) をキーにしているため、
- * ここに来る時点で既に合算済み)。
+ * main・サブエージェントいずれもセッションを跨いでは合算しない
+ * (continued-in でつながったセッションは1つのセッションとみなし、
+ * sessionId には鎖の先頭を渡す)。
+ * ただし同一セッション内で同じ agentType を複数回呼び出した分は合算する。
  */
 function displayKey(agentType: string, sessionId: string, leaf: string): string {
   return `${agentType} [${leaf}:${sessionId.slice(0, 8)}]`;
@@ -282,6 +318,64 @@ function findSessionFiles(): string[] {
   return files;
 }
 
+type Continuations = { next: Map<string, string[]>; prev: Map<string, string> };
+
+/**
+ * 各セッションファイルの continued-in 行 (続き元の jsonl にだけ書かれる) から
+ * 続き元 -> 続き先 の対応を集める。
+ */
+function loadContinuations(sessionFiles: string[]): Continuations {
+  const next = new Map<string, string[]>();
+  const prev = new Map<string, string>();
+  for (const sf of sessionFiles) {
+    let text: string;
+    try {
+      text = readFileSync(sf, "utf8");
+    } catch {
+      continue;
+    }
+    for (const line of text.split("\n")) {
+      if (!line.includes('"continued-in"')) continue;
+      let d: any;
+      try {
+        d = JSON.parse(line);
+      } catch {
+        continue;
+      }
+      if (d.type !== "continued-in") continue;
+      const from = d.sessionId;
+      const to = d.continuedInSessionId;
+      if (typeof from !== "string" || typeof to !== "string" || from === to) continue;
+      const list = getOr(next, from, () => [] as string[]);
+      if (!list.includes(to)) list.push(to);
+      if (!prev.has(to)) prev.set(to, from);
+    }
+  }
+  return { next, prev };
+}
+
+function chainRoot(sessionId: string, cont: Continuations): string {
+  const visited = new Set<string>([sessionId]);
+  let cur = sessionId;
+  for (let p = cont.prev.get(cur); p !== undefined && !visited.has(p); p = cont.prev.get(cur)) {
+    visited.add(p);
+    cur = p;
+  }
+  return cur;
+}
+
+/** 鎖の先頭から続き先の順にたどったセッション ID の列。 */
+function chainMembers(root: string, cont: Continuations): string[] {
+  const out: string[] = [];
+  const visit = (id: string) => {
+    if (out.includes(id)) return;
+    out.push(id);
+    for (const n of cont.next.get(id) ?? []) visit(n);
+  };
+  visit(root);
+  return out;
+}
+
 function isDir(path: string): boolean {
   try {
     return statSync(path).isDirectory();
@@ -306,11 +400,20 @@ function main(): void {
   const idFilter = args.sessionIdFilter ? args.sessionIdFilter.toLowerCase() : null;
   const ccusageCosts = loadCcusageSessionCosts();
 
-  let sessionFiles = findSessionFiles();
+  const sessionFiles = findSessionFiles();
+  const fileOf = new Map(sessionFiles.map((sf) => [basename(sf).slice(0, -".jsonl".length), sf]));
+  let targetIds = [...fileOf.keys()];
   if (idFilter) {
-    sessionFiles = sessionFiles.filter((sf) =>
-      basename(sf).slice(0, -".jsonl".length).toLowerCase().startsWith(idFilter),
-    );
+    targetIds = targetIds.filter((id) => id.toLowerCase().startsWith(idFilter));
+  }
+
+  // chains[鎖の先頭] = 先頭から続き先の順に並べた、ファイルのあるセッション ID
+  const continuations = loadContinuations(sessionFiles);
+  const chains = new Map<string, string[]>();
+  for (const id of targetIds) {
+    const root = chainRoot(id, continuations);
+    if (chains.has(root)) continue;
+    chains.set(root, chainMembers(root, continuations).filter((m) => fileOf.has(m)));
   }
 
   // tokensToday[sessionId\0agentType][model\0effort] = {input,output,cache_write,cache_read}
@@ -319,69 +422,83 @@ function main(): void {
   const sessionModelTotalWeight = new Map<string, Map<string, number>>();
   // sessionModelAgentWeightToday[sessionId][model][agentType] = 本日分の重み (分子)
   const sessionModelAgentWeightToday = new Map<string, Map<string, Map<string, number>>>();
-  // leafOf[sessionId] = プロジェクト名 (表示用)
+  // rootOf[sessionId] = 鎖の先頭のセッション ID (表示用)
+  const rootOf = new Map<string, string>();
+  // leafOf[鎖の先頭のセッション ID] = プロジェクト名 (表示用)
   const leafOf = new Map<string, string>();
 
   const missingCostSessions = new Set<string>();
 
-  for (const sf of sessionFiles) {
-    const sessionId = basename(sf).slice(0, -".jsonl".length);
-    leafOf.set(sessionId, projectLeaf(basename(dirname(sf))));
-    const subdir = join(dirname(sf), sessionId, "subagents");
-    const sources: [string, string][] = [["main", sf]];
-    if (isDir(subdir)) {
-      // 起動順に近い順序で番号を振るため、meta の更新時刻でソートする。
-      const metaPaths = listDir(subdir)
-        .filter((n) => !n.startsWith(".") && n.endsWith(".meta.json"))
-        .map((n) => join(subdir, n))
-        .map((p) => ({ path: p, mtime: statSync(p).mtimeMs / 1000 }))
-        .sort((a, b) => (a.mtime !== b.mtime ? a.mtime - b.mtime : a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
-        .map((x) => x.path);
-      const seq = new Map<string, number>();
-      for (const metaPath of metaPaths) {
-        const agentFile = metaPath.slice(0, -".meta.json".length) + ".jsonl";
-        if (!existsSync(agentFile)) continue;
-        let meta: any;
-        try {
-          meta = JSON.parse(readFileSync(metaPath, "utf8"));
-        } catch {
-          meta = {};
+  for (const [root, members] of chains) {
+    // ccusage は続き先に写ったリクエストを続き元の側で数えるため、
+    // 鎖の先頭から順に処理し、既出のリクエストは後のセッションで数えない。
+    const seen = new Set<string>();
+    // 鎖全体で1行にまとめるので、--id 指定時の #N も鎖全体で通し番号にする。
+    const seq = new Map<string, number>();
+    for (const sessionId of members) {
+      const sf = fileOf.get(sessionId)!;
+      rootOf.set(sessionId, root);
+      if (!leafOf.has(root)) leafOf.set(root, projectLeaf(basename(dirname(sf))));
+      const subdir = join(dirname(sf), sessionId, "subagents");
+      const sources: [string, string][] = [["main", sf]];
+      if (isDir(subdir)) {
+        // 起動順に近い順序で番号を振るため、meta の更新時刻でソートする。
+        const metaPaths = listDir(subdir)
+          .filter((n) => !n.startsWith(".") && n.endsWith(".meta.json"))
+          .map((n) => join(subdir, n))
+          .map((p) => ({ path: p, mtime: statSync(p).mtimeMs / 1000 }))
+          .sort((a, b) => (a.mtime !== b.mtime ? a.mtime - b.mtime : a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
+          .map((x) => x.path);
+        for (const metaPath of metaPaths) {
+          const agentFile = metaPath.slice(0, -".meta.json".length) + ".jsonl";
+          if (!existsSync(agentFile)) continue;
+          let meta: any;
+          try {
+            meta = JSON.parse(readFileSync(metaPath, "utf8"));
+          } catch {
+            meta = {};
+          }
+          const agentType = meta?.agentType ?? "unknown-subagent";
+          seq.set(agentType, (seq.get(agentType) ?? 0) + 1);
+          let label = agentType;
+          if (idFilter) {
+            // --id 指定時は同一 agentType の呼び出しを合算せず、個別行として表示する。
+            label = `${agentType}#${seq.get(agentType)}`;
+          }
+          sources.push([label, agentFile]);
         }
-        const agentType = meta?.agentType ?? "unknown-subagent";
-        seq.set(agentType, (seq.get(agentType) ?? 0) + 1);
-        let label = agentType;
-        if (idFilter) {
-          // --id 指定時は同一 agentType の呼び出しを合算せず、個別行として表示する。
-          label = `${agentType}#${seq.get(agentType)}`;
-        }
-        sources.push([label, agentFile]);
       }
-    }
 
-    for (const [agentType, path] of sources) {
-      const deduped = dedupLast(readUsageEntries(path, agentType === "main"));
-      for (const { ts, usage, model, effort } of deduped) {
-        if (!model) continue;
-        const w = weight(usage);
-        // コスト配分は ccusage 側の単価が model 単位 (effort別ではない) なので、
-        // ここは生の model 名のまま集計する。
-        const perModel = getOr(sessionModelTotalWeight, sessionId, () => new Map<string, number>());
-        perModel.set(model, (perModel.get(model) ?? 0) + w);
-        if (inDate(ts, targetDate)) {
-          const perAgent = getOr(
-            getOr(sessionModelAgentWeightToday, sessionId, () => new Map()),
-            model,
-            () => new Map<string, number>(),
-          );
-          perAgent.set(agentType, (perAgent.get(agentType) ?? 0) + w);
-          // 表示用のトークン内訳は model+effort 単位で分ける。
-          const t = getOr(
-            getOr(tokensToday, `${sessionId}\0${agentType}`, () => new Map<string, Tokens>()),
-            `${model}\0${effort ?? ""}`,
-            () => ({ input: 0, output: 0, cache_write: 0, cache_read: 0 }),
-          );
-          const add = tok(usage);
-          for (const k of TOKEN_KEYS) t[k] += add[k];
+      for (const [agentType, path] of sources) {
+        const deduped = dedupLast(readUsageEntries(path, agentType === "main"));
+        for (const { ts, requestId, messageId, usage, model, effort } of deduped) {
+          if (!model) continue;
+          if (requestId && messageId) {
+            const key = `${messageId}:${requestId}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+          }
+          const w = weight(usage, model);
+          // コスト配分は ccusage 側の単価が model 単位 (effort別ではない) なので、
+          // ここは生の model 名のまま集計する。
+          const perModel = getOr(sessionModelTotalWeight, sessionId, () => new Map<string, number>());
+          perModel.set(model, (perModel.get(model) ?? 0) + w);
+          if (inDate(ts, targetDate)) {
+            const perAgent = getOr(
+              getOr(sessionModelAgentWeightToday, sessionId, () => new Map()),
+              model,
+              () => new Map<string, number>(),
+            );
+            perAgent.set(agentType, (perAgent.get(agentType) ?? 0) + w);
+            // 表示用のトークン内訳は model+effort 単位で分ける。
+            const t = getOr(
+              getOr(tokensToday, `${sessionId}\0${agentType}`, () => new Map<string, Tokens>()),
+              `${model}\0${effort ?? ""}`,
+              () => ({ input: 0, output: 0, cache_write: 0, cache_read: 0 }),
+            );
+            const add = tok(usage);
+            for (const k of TOKEN_KEYS) t[k] += add[k];
+          }
         }
       }
     }
@@ -416,7 +533,8 @@ function main(): void {
     const sep = sessionAgent.indexOf("\0");
     const sessionId = sessionAgent.slice(0, sep);
     const agentType = sessionAgent.slice(sep + 1);
-    const key = displayKey(agentType, sessionId, leafOf.get(sessionId) ?? "?");
+    const root = rootOf.get(sessionId) ?? sessionId;
+    const key = displayKey(agentType, root, leafOf.get(root) ?? "?");
     const row = getOr(display, key, () => ({
       input: 0,
       output: 0,
@@ -440,7 +558,7 @@ function main(): void {
   if (idFilter) header += `  [id filter: ${idFilter}*]`;
   console.log(header + "\n");
 
-  if (idFilter && sessionFiles.length === 0) {
+  if (idFilter && targetIds.length === 0) {
     console.log(`[warning] session_id が '${idFilter}' で始まるセッションが見つかりません`);
     return;
   }
