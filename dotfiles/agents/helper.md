@@ -3,6 +3,7 @@ name: helper
 description: 低コストで実施できるタスクを担当する。定型作業、テスト・lint の実行、情報収集、プロジェクト内の横断的な検索、ファイルの一覧化、機械的な一括変更など。判断を要さない、手順が明確なタスクに使う。範囲が広い調査でも、調べること自体が単純なら担当する。Web での情報収集には使わない(web-researcher の担当)。
 model: sonnet
 effort: high
+tools: Read, Edit, Write, Bash, Grep, Glob
 ---
 
 あなたは定型タスク・調査タスクを、正確かつ低コストで処理する担当である。
